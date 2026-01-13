@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鍍金常春藤：荆棘王冠 (修復版)</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400&display=swap');
+        
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        
+        .font-header { font-family: 'Cinzel', serif; }
+        .font-prose { font-family: 'Playfair Display', serif; }
+
+        .old-money-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #94a3b8 #1e293b;
+        }
+        .old-money-scroll::-webkit-scrollbar { width: 6px; }
+        .old-money-scroll::-webkit-scrollbar-track { background: #1e293b; }
+        .old-money-scroll::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 4px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 手機滑動動畫 */
+        .phone-overlay {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 內置 SVG 圖標組件 (解決外部庫加載失敗問題) ---
+        const Icons = {
+            Phone: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Heart: ({filled}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+            Message: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>,
+            Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>,
+            Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>,
+            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        };
+
+        // --- 遊戲數據 ---
+        const CHARACTERS = {
+            mc: { name: "維多利亞", avatar: "https://placehold.co/100x100/pink/white?text=V" },
+            alex: { name: "亞歷山大", avatar: "https://placehold.co/100x100/1e293b/gold?text=A" },
+            eli: { name: "伊萊", avatar: "https://placehold.co/100x100/3f3f46/white?text=E" },
+            rex: { name: "瑞克斯", avatar: "https://placehold.co/100x100/7f1d1d/white?text=R" }
+        };
+
+        const INITIAL_FEED = [
+            {
+                id: 1,
+                author: "Gossip Girl 2.0",
+                avatar: "https://placehold.co/50x50/000/FFF?text=G",
+                content: "聽說女王蜂維多利亞今天心情不好？小心別被蜇傷了。 #StHelios #QueenV",
+                likes: 124,
+                comments: [{ user: "User88", text: "她哪天心情好過？" }],
+                isPrivate: false
+            }
+        ];
+
+        // --- 主組件 ---
+        const Game = () => {
+            const [sceneId, setSceneId] = useState('intro');
+            const [stats, setStats] = useState({ purity: 50, dominance: 50, lust: 0 });
+            const [feed, setFeed] = useState(INITIAL_FEED);
+            const [notifications, setNotifications] = useState(0);
+            const [isPhoneOpen, setIsPhoneOpen] = useState(false);
+            const [history, setHistory] = useState([]);
+
+            const updateStat = (type, value) => setStats(prev => ({ ...prev, [type]: Math.min(100, Math.max(0, prev[type] + value)) }));
+            const addPost = (post) => { setFeed(prev => [post, ...prev]); setNotifications(prev => prev + 1); };
+
+            // 劇情配置
+            const SCENES = {
+                'intro': {
+                    title: "鏡中玫瑰",
+                    text: [
+                        "聖赫利奧斯學院的早晨總是帶著一股潮濕的霧氣。你站在全雷射雕刻的落地鏡前，審視著自己的倒影。",
+                        "你是維多利亞·范德比爾特，這個學院金字塔頂端的女人。鏡子裡的少女擁有令人窒息的美貌，但眼神中透著一絲不易察覺的傲慢。"
+                    ],
+                    image: "https://placehold.co/600x400/1e293b/FFF?text=Mirror+Scene",
+                    options: [
+                        { text: "調整領結，我要讓所有人都臣服。", action: () => { updateStat('dominance', 10); setSceneId('hallway'); } },
+                        { text: "嘆了口氣，其實有點不想去面對。", action: () => { updateStat('purity', 10); setSceneId('hallway'); } }
+                    ]
+                },
+                'hallway': {
+                    title: "走廊的視線",
+                    text: [
+                        "走過主教學樓的長廊，人群自動分開。你能感受到無數道視線黏在你身上——羨慕、嫉妒，還有赤裸裸的情慾。",
+                        "手機震動了一下。是『The Hive』的提示音。"
+                    ],
+                    image: "https://placehold.co/600x400/2f3e46/FFF?text=Hallway+Scene",
+                    effect: () => {
+                        if (!history.includes('hallway_notif')) {
+                            setNotifications(prev => prev + 1);
+                            setHistory(prev => [...prev, 'hallway_notif']);
+                        }
+                    },
+                    options: [
+                        { text: "無視手機，保持優雅。", action: () => setSceneId('encounter_alex') },
+                        { text: "【點擊右側手機圖標】查看消息", action: () => { setIsPhoneOpen(true); setSceneId('encounter_alex'); }, style: "border-yellow-500 text-yellow-200" }
+                    ]
+                },
+                'encounter_alex': {
+                    title: "宿敵與未婚夫",
+                    text: [
+                        "轉角處，一個高大的身影擋住了去路。是亞歷山大。他穿著訂製的西裝校服，領帶鬆鬆垮垮，眼神像是在看一件屬於他的昂貴收藏品。",
+                        "「早安，維多利亞。」他低沉的聲音帶著一絲戲謔，「昨晚沒回我訊息，是在忙著挑選今天要寵幸的對象嗎？」"
+                    ],
+                    image: "https://placehold.co/600x400/333/gold?text=Alexander",
+                    options: [
+                        { text: "冷笑反擊：「讓開，好狗不擋路。」", action: () => { updateStat('dominance', 15); setSceneId('alex_reaction_dom'); } },
+                        { text: "臉紅迴避：「我...我只是睡著了。」", action: () => { updateStat('dominance', -10); setSceneId('alex_reaction_sub'); } }
+                    ]
+                },
+                'alex_reaction_dom': {
+                    title: "權力的博弈",
+                    text: [
+                        "亞歷山大愣了一下，隨即眼中的興趣更濃了。他湊到你耳邊：「這張嘴真是越來越厲害了。今晚游泳隊有派對，穿少點。」"
+                    ],
+                    image: "https://placehold.co/600x400/333/gold?text=Power+Play",
+                    options: [{ text: "前往更衣室準備上課", action: () => setSceneId('locker_room') }]
+                },
+                'alex_reaction_sub': {
+                    title: "獵物的自覺",
+                    text: [
+                        "亞歷山大滿意地笑了。他把你逼到櫃門上：「乖女孩。今晚來我的寢室，我需要補償。」"
+                    ],
+                    image: "https://placehold.co/600x400/333/gold?text=Prey",
+                    options: [{ text: "逃離現場，前往更衣室", action: () => { updateStat('lust', 10); setSceneId('locker_room'); } }]
+                },
+                'locker_room': {
+                    title: "更衣室的誘惑",
+                    text: [
+                        "更衣室空無一人。你換上體育課的短裙，看著鏡子中完美的曲線。一個大膽的想法在腦海中浮現。",
+                        "要在『The Hive』上發點什麼嗎？"
+                    ],
+                    image: "https://placehold.co/600x400/pink/white?text=Locker+Room",
+                    options: [
+                        { 
+                            text: "發布一張正常的對鏡自拍", 
+                            action: () => {
+                                addPost({
+                                    id: Date.now(), author: CHARACTERS.mc.name, avatar: CHARACTERS.mc.avatar,
+                                    content: "早晨的體育課。有點累。 🎾", likes: 5, comments: [], isPrivate: false
+                                });
+                                updateStat('purity', 5); setSceneId('class_start');
+                            }
+                        },
+                        { 
+                            text: "【大膽】拉低領口，發布擦邊快拍 (墮落+)", 
+                            action: () => {
+                                addPost({
+                                    id: Date.now(), author: CHARACTERS.mc.name, avatar: CHARACTERS.mc.avatar,
+                                    content: "有點熱... 💦 #Private",
+                                    image: "https://placehold.co/300x200/111/pink?text=Censored",
+                                    likes: 0, comments: [], isPrivate: true
+                                });
+                                updateStat('purity', -10); updateStat('lust', 10); setSceneId('social_reaction');
+                            },
+                            style: "border-rose-500 text-rose-300"
+                        }
+                    ]
+                },
+                'social_reaction': {
+                    title: "網絡效應",
+                    text: [
+                        "照片發出去不到十秒，手機開始瘋狂震動。你收到了新的私信和大量點讚。",
+                        "請打開手機查看反應。"
+                    ],
+                    image: "https://placehold.co/600x400/000/red?text=Viral",
+                    effect: () => { if (!history.includes('dm_rx')) { setNotifications(prev => prev + 3); setHistory(prev => [...prev, 'dm_rx']); } },
+                    options: [{ text: "打開手機查看", action: () => { setIsPhoneOpen(true); setSceneId('end_demo'); } }]
+                },
+                'class_start': { title: "平靜的課程", text: ["你選擇了保持低調。雖然安全，但也少了一絲刺激。(Demo結束-純潔線)"], image: "https://placehold.co/600x400/eee/333?text=Classroom", options: [{ text: "重置", action: () => window.location.reload() }] },
+                'end_demo': { title: "未完待續", text: ["在手機上查看他們的反應吧。這場權力遊戲才剛剛開始。(Demo結束)"], image: "https://placehold.co/600x400/000/gold?text=The+End", options: [{ text: "重置", action: () => window.location.reload() }] }
+            };
+
+            useEffect(() => { if (SCENES[sceneId].effect) SCENES[sceneId].effect(); }, [sceneId]);
+
+            const currentScene = SCENES[sceneId];
+
+            // 狀態條組件
+            const StatBar = ({ label, value, color1, color2, icon: Icon }) => (
+                <div className="mb-4">
+                    <div className="flex justify-between items-center mb-1 text-xs uppercase tracking-widest text-gray-400">
+                        <span className="flex items-center gap-1"><Icon /> {label}</span>
+                        <span>{value}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div className="h-full transition-all duration-500" style={{ width: `${value}%`, background: `linear-gradient(90deg, ${color1}, ${color2})` }} />
+                    </div>
+                </div>
+            );
+
+            // 手機App組件
+            const PhoneApp = () => {
+                const [mode, setMode] = useState('feed');
+                return (
+                    <div className="h-full bg-black text-white flex flex-col font-sans">
+                        <div className="px-4 py-3 bg-gray-900 border-b border-gray-800 flex justify-between items-center">
+                            <h2 className="font-bold text-lg italic tracking-tighter text-yellow-500">The Hive</h2>
+                            <button onClick={() => setMode(mode === 'feed' ? 'dm' : 'feed')} className="p-1 rounded hover:bg-gray-800">
+                                {mode === 'feed' ? <Icons.Message /> : <Icons.Camera />}
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto old-money-scroll">
+                            {mode === 'feed' ? (
+                                <div className="space-y-0">
+                                    {feed.map(post => (
+                                        <div key={post.id} className="border-b border-gray-800 pb-4 bg-gray-950">
+                                            <div className="p-3 flex items-center gap-3">
+                                                <img src={post.avatar} className="w-8 h-8 rounded-full border border-gray-700" />
+                                                <div>
+                                                    <p className="font-bold text-sm text-gray-200">{post.author}</p>
+                                                    {post.isPrivate && <span className="text-[10px] text-green-400 border border-green-900 px-1 rounded bg-green-900/20">密友圈</span>}
+                                                </div>
+                                            </div>
+                                            {post.image && <div className="w-full h-48 bg-gray-900 overflow-hidden"><img src={post.image} className="w-full h-full object-cover opacity-80" /></div>}
+                                            <div className="p-3">
+                                                <div className="flex gap-3 mb-2 text-gray-400">
+                                                    <Icons.Heart filled={post.likes > 10} /> <Icons.Message /> <Icons.Send />
+                                                </div>
+                                                <p className="text-sm font-semibold">{post.likes + (post.isPrivate ? 69 : 0)} likes</p>
+                                                <p className="text-sm text-gray-300"><span className="font-bold mr-2">{post.author}</span>{post.content}</p>
+                                                {post.isPrivate && (
+                                                    <div className="mt-2 space-y-1 bg-gray-900/50 p-2 rounded">
+                                                        <p className="text-xs text-gray-400"><span className="font-bold text-yellow-600">Rex_Rugby</span> 🔥 該死，你在挑釁我？</p>
+                                                        <p className="text-xs text-gray-400"><span className="font-bold text-blue-400">Eli_Valedictorian</span> 把它刪了，現在。</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-4 space-y-2">
+                                    <h3 className="text-gray-500 text-xs uppercase mb-2">Direct Messages</h3>
+                                    <div className="flex items-center gap-3 p-2 bg-gray-900 rounded border border-gray-800">
+                                        <img src={CHARACTERS.alex.avatar} className="w-10 h-10 rounded-full" />
+                                        <div className="flex-1">
+                                            <p className="font-bold text-sm">Alexander</p>
+                                            <p className="text-xs text-gray-400">別讓我重複第二遍。</p>
+                                        </div>
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    </div>
+                                    {feed.some(p => p.isPrivate) && (
+                                        <div className="flex items-center gap-3 p-2 bg-gray-900 rounded border border-gray-800">
+                                            <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">?</div>
+                                            <div className="flex-1"><p className="font-bold text-sm text-red-400">Unknown</p><p className="text-xs text-gray-400">已截圖。</p></div>
+                                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-950 flex justify-center items-center p-0 lg:p-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] relative overflow-hidden">
+                    
+                    {/* 手機版：頂部導航 (僅在手機顯示) */}
+                    <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900/90 backdrop-blur z-40 flex justify-between items-center px-4 border-b border-white/10">
+                        <span className="font-header text-yellow-100">Gilded Ivy</span>
+                        <button 
+                            onClick={() => setIsPhoneOpen(true)}
+                            className="text-yellow-500 relative p-2"
+                        >
+                            <Icons.Phone />
+                            {notifications > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
+                        </button>
+                    </div>
+
+                    <div className="w-full max-w-6xl h-screen lg:h-[85vh] flex gap-6 relative mt-16 lg:mt-0">
+                        
+                        {/* 左側：故事主舞台 */}
+                        <div className="flex-1 glass-panel lg:rounded-lg shadow-2xl flex flex-col w-full">
+                            <div className="hidden lg:flex h-16 border-b border-white/10 items-center justify-between px-6 bg-slate-900/50">
+                                <h1 className="font-header text-xl text-yellow-100 tracking-widest uppercase">
+                                    鍍金常春藤 <span className="text-xs normal-case text-yellow-600 ml-2">The Crown of Thorns</span>
+                                </h1>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto old-money-scroll p-6 lg:p-10 flex flex-col animate-fade-in pb-24 lg:pb-10">
+                                <div className="w-full h-64 lg:h-80 bg-black rounded-sm border-2 border-slate-800 mb-6 overflow-hidden relative group shrink-0">
+                                    <img src={currentScene.image} className="w-full h-full object-cover opacity-80" />
+                                    <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-950 to-transparent"></div>
+                                    <div className="absolute bottom-4 left-4 font-header text-lg text-yellow-50">{currentScene.title}</div>
+                                </div>
+                                
+                                <div className="font-prose text-lg lg:text-xl leading-relaxed text-slate-300 space-y-4 mb-8">
+                                    {currentScene.text.map((p, i) => <p key={i}>{p}</p>)}
+                                </div>
+
+                                <div className="mt-auto space-y-3">
+                                    {currentScene.options.map((opt, i) => (
+                                        <button key={i} onClick={opt.action} className={`w-full p-4 text-left border border-slate-600 bg-slate-900/50 hover:bg-slate-800 transition-all ${opt.style || ''}`}>
+                                            <span className="font-header text-yellow-600 mr-2">❖</span> {opt.text}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 右側：手機/屬性面板 (桌面端顯示，手機端為覆蓋層) */}
+                        <div className={`
+                            fixed inset-0 z-50 lg:static lg:z-auto lg:w-80 lg:block
+                            bg-slate-950 lg:bg-transparent flex flex-col gap-4
+                            phone-overlay
+                            ${isPhoneOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
+                        `}>
+                            {/* 手機版：關閉按鈕區域 */}
+                            <div className="lg:hidden pt-4 px-4 pb-2 flex justify-end bg-slate-900 border-b border-slate-800">
+                                <button onClick={() => setIsPhoneOpen(false)} className="text-white p-2 bg-slate-800 rounded-full">
+                                    <Icons.X />
+                                </button>
+                            </div>
+
+                            {/* 屬性面板 */}
+                            <div className="glass-panel p-6 lg:rounded-lg shrink-0">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <img src={CHARACTERS.mc.avatar} className="w-16 h-16 rounded-full border-2 border-yellow-600/50 p-1" />
+                                    <div>
+                                        <h3 className="font-header text-yellow-100">{CHARACTERS.mc.name}</h3>
+                                        <p className="text-xs text-slate-400">Class of 2026</p>
+                                    </div>
+                                </div>
+                                <StatBar label="純潔" value={stats.purity} color1="#3b82f6" color2="#ef4444" icon={Icons.Shield} />
+                                <StatBar label="支配" value={stats.dominance} color1="#a855f7" color2="#f472b6" icon={Icons.Lock} />
+                                {stats.lust > 0 && <StatBar label="慾望" value={stats.lust} color1="#be123c" color2="#be123c" icon={Icons.Heart} />}
+                            </div>
+
+                            {/* 模擬手機界面 */}
+                            <div className="flex-1 bg-black lg:rounded-[2rem] lg:border-4 lg:border-slate-700 overflow-hidden shadow-2xl relative flex flex-col">
+                                <div className="hidden lg:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-xl z-20"></div>
+                                <PhoneApp />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Game />);
+    </script>
+</body>
+</html>
+
+
